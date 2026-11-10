@@ -1,0 +1,24 @@
+:root { --fs: 18px; --green: #1f7a4d; --bg: #fafaf7; --warn: #fff3cd; --hl: #ffe08a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: #1b1b1b; font: var(--fs)/1.6 system-ui, sans-serif; }
+main, header { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+header { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
+h1 { font-size: 1.6rem; margin: .2rem 0; } h2 { font-size: 1.25rem; border-bottom: 2px solid var(--green); padding-bottom: .2rem; }
+button, .btn { background: var(--green); color: #fff; border: 0; border-radius: 8px; padding: .7rem 1.2rem; font-size: 1rem; cursor: pointer; }
+button.ghost { background: transparent; color: var(--green); border: 2px solid var(--green); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input[type=text], input[type=password], select, textarea { font-size: 1rem; padding: .6rem; width: 100%; max-width: 420px; margin: .25rem 0; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 1rem 1.25rem; margin: 1rem 0; }
+.err { background: #fde8e8; padding: .6rem 1rem; border-radius: 8px; } .warn { background: var(--warn); padding: .5rem .8rem; border-radius: 8px; }
+.metrics { display: flex; flex-wrap: wrap; gap: .75rem; } .metrics div { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: .5rem .9rem; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } .head { font-weight: 700; margin-top: .5rem; }
+.row { border-top: 1px solid #e3e3e3; padding: .6rem 0; }
+.orig { white-space: pre-wrap; font: .9rem/1.5 ui-monospace, monospace; background: #f1f1ec; padding: .6rem; border-radius: 8px; margin: 0; }
+.simple p { margin: 0 0 .5rem; } mark { background: var(--hl); padding: 0 .15rem; border-radius: 3px; }
+.unmatched { background: var(--warn); padding: .6rem; border-radius: 8px; }
+.chip { display: inline-block; background: #e5f3ec; color: #14573a; border-radius: 999px; padding: .1rem .7rem; margin: 0 .3rem .3rem 0; font-size: .85rem; text-decoration: none; }
+table { border-collapse: collapse; width: 100%; font-size: .85rem; } th, td { border-bottom: 1px solid #ddd; padding: .35rem .5rem; text-align: left; }
+.scroll { overflow-x: auto; } .tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.likert label { margin-right: .8rem; white-space: nowrap; }
+@media (max-width: 720px) { .cols { grid-template-columns: 1fr; } .head.cols span:first-child { display: none; } }
+@media print { header, .noprint { display: none; } }
