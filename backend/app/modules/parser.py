@@ -1,5 +1,6 @@
 """FR-1, FR-2: upload validation and PDF/plain-text parsing (tables kept in reading position)."""
 import io
+import os
 import pdfplumber
 
 class ValidationError(Exception):
@@ -7,9 +8,14 @@ class ValidationError(Exception):
 
 class PDFDocumentParser:
     ALLOWED = {".pdf", ".txt"}
+    MIN_PAGE_CHARS = 20   # pages with less text than this are read by OCR
 
-    def __init__(self, max_mb=5, max_pages=40):
+    def __init__(self, max_mb=5, max_pages=40, ocr=None, ocr_dpi=None, ocr_lang=None):
         self.max_bytes, self.max_pages = max_mb * 1024 * 1024, max_pages
+        self.ocr = (os.getenv("OCR_ENABLED", "1") == "1") if ocr is None else ocr
+        self.ocr_dpi = int(os.getenv("OCR_DPI", 250)) if ocr_dpi is None else ocr_dpi
+        self.ocr_lang = os.getenv("OCR_LANG", "eng") if ocr_lang is None else ocr_lang
+        self.ocr_pages = 0
 
     def validate(self, filename: str, data: bytes) -> str:
         ext = "." + filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
@@ -25,6 +31,7 @@ class PDFDocumentParser:
 
     def parse(self, filename: str, data: bytes) -> str:
         ext = self.validate(filename, data)
+        self.ocr_pages = 0
         if ext == ".txt":
             text = data.decode("utf-8")
         else:
@@ -35,7 +42,7 @@ class PDFDocumentParser:
             except ValidationError: raise
             except Exception: raise ValidationError(422, "The PDF could not be read.")
         if len(text.strip()) < 50:
-            raise ValidationError(422, "No readable text found. Scanned PDFs need OCR, which is not enabled.")
+            raise ValidationError(422, "No readable text found in this document, even after scanning it for text. Try a clearer, straighter scan or a text-based PDF.")
         return text
 
     @staticmethod
@@ -43,6 +50,21 @@ class PDFDocumentParser:
         y0, y1 = max(0, y0), min(page.height, y1)
         if y1 - y0 < 2: return ""
         return page.crop((0, y0, page.width, y1)).extract_text() or ""
+
+    def _ocr_page(self, page):
+        """Local OCR only (NFR-7): the page is rendered to an image and read by Tesseract on this machine."""
+        try:
+            import pytesseract
+            from PIL import ImageOps
+        except ImportError:
+            raise ValidationError(422, "This looks like a scanned PDF, but the OCR component is not installed on this server.")
+        try:
+            img = ImageOps.autocontrast(page.to_image(resolution=self.ocr_dpi).original.convert("L"))
+            return pytesseract.image_to_string(img, lang=self.ocr_lang) or ""
+        except pytesseract.TesseractNotFoundError:
+            raise ValidationError(422, "This looks like a scanned PDF, but the OCR engine (Tesseract) is not installed on this server.")
+        except pytesseract.TesseractError:
+            raise ValidationError(422, f"OCR failed (is the '{self.ocr_lang}' language data installed?).")
 
     def _page(self, page):
         """Text above/between/below tables + each table row flattened to one 'a | b | c' line."""
@@ -54,4 +76,8 @@ class PDFDocumentParser:
                 if any(cells): out.append(" | ".join(cells))
             y = t.bbox[3]
         out.append(self._crop_text(page, y, page.height))
-        return "\n".join(s for s in out if s)
+        text = "\n".join(s for s in out if s)
+        if self.ocr and len(text.strip()) < self.MIN_PAGE_CHARS:
+            text = "\n".join(l.rstrip() for l in self._ocr_page(page).splitlines() if l.strip())
+            if text: self.ocr_pages += 1
+        return text
